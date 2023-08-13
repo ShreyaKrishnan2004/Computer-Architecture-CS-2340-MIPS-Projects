@@ -1,0 +1,163 @@
+# Asks the user to input their name and three numbers and outputs the user's
+# name and the values of three arthimetic equations using those numbers
+
+.data
+#variable to store user's name
+name: .asciiz ""
+#variables for messages
+nameMsg: .asciiz "What is your name? "
+intMsg: .asciiz "Please enter an integer between 1-100: "
+resultsMsg: .asciiz "your answers are: "
+#variables to store inputs
+a: .word 5
+b: .word 6
+c: .word 7
+#variables to store answers
+answer1: .word 9
+answer2: .word 9
+answer3: .word 9
+
+.text
+main:
+	#Prompts the user to enter their name
+	li $v0, 4
+	la $a0, nameMsg
+	syscall
+	
+	#Stores the user's name
+	li $v0, 8
+	la $a0, name
+	li $a1, 20
+	syscall
+	
+	#Ask the user for three integer inputs
+	
+	#Prompts the user for the first integer
+	li $v0, 4
+	la $a0, intMsg
+	syscall
+	
+	#Stores the user's input into the v0 register
+	li $v0, 5
+	syscall
+	
+	#Moves the user's input from the v0 register into variable a
+	sw $v0, a
+	
+	#Prompts the user for the second integer
+	li $v0, 4
+	la $a0, intMsg
+	syscall
+	
+	#Stores the user's input into the v0 register
+	li $v0, 5
+	syscall
+	
+	#Moves the user's input from the v0 register into variable b
+	sw $v0, b
+	
+	#Prompts the user for the third integer
+	li $v0, 4
+	la $a0, intMsg
+	syscall
+	
+	#Stores the user's input into the v0 register
+	li $v0, 5
+	syscall
+	
+	#Moves the user's input from the v0 register into variable c
+	sw $v0, c
+	
+	#compute answer1 = 2a - c + 4
+	lw $t1, a
+	lw $t2, c
+	add $t0, $t1, $t1
+	sub $t0, $t0, $t2
+	add $t1, $t0, 4
+	sw $t1, answer1
+	
+	#compute answer2 = b - c + (a - 2)
+	lw $t1, a
+	lw $t2, b
+	lw $t3, c
+	sub $t1, $t1, 2
+	sub $t0, $t2, $t3
+	add $t0, $t0, $t1
+	sw $t0, answer2
+	
+	#compute answer3 = (a + 3) - (b - 1) + (c + 3)
+	lw $t1, a
+	lw $t2, b
+	lw $t3, c
+	add $t1, $t1, 3
+	sub $t2, $t2, 1
+	add $t3, $t3, 3
+	sub $t0, $t1, $t2
+	add $t0, $t0, $t3
+	sw $t0, answer3
+	
+	#prints out name
+	li $v0, 4
+	la $a0, name
+	syscall
+	
+	#prints out result message
+	li $v0, 4
+	la $a0, resultsMsg
+	syscall
+	
+	#prints out answer1
+	li $v0, 1
+	lw $t0, answer1
+	move $a0, $t0
+	syscall
+	
+	#prints out a space between answer1 and answer2
+	li $v0, 11
+	li $a0, 32
+	syscall
+	
+	#prints out answer2
+	li $v0, 1
+	lw $t0, answer2
+	move $a0, $t0
+	syscall
+	
+	#prints out a space between answer2 and answer3
+	li $v0, 11
+	li $a0, 32
+	syscall
+	
+	#prints out answer3
+	li $v0, 1
+	lw $t0, answer3
+	move $a0, $t0
+	syscall
+exit:
+	#exit program
+	li $v0, 10
+	syscall
+	
+#	Sample Run 1:
+#	What is your name? Shreya
+#	Please enter an integer between 1-100: 12
+#	Please enter an integer between 1-100: 23
+#	Please enter an integer between 1-100: 34
+#	Shreya
+#	your answers are: -6 -1 30
+
+#	Sample Run 2:
+#	What is your name? Shreya
+#	Please enter an integer between 1-100: 57
+#	Please enter an integer between 1-100: 1
+#	Please enter an integer between 1-100: 99
+#	Shreya
+#	your answers are: 19 -43 162
+
+#	Sample Run 3:
+#	What is your name? Shreya
+#	Please enter an integer between 1-100: 87
+#	Please enter an integer between 1-100: 39
+#	Please enter an integer between 1-100: 20
+#	Shreya
+#	your answers are: 158 104 75
