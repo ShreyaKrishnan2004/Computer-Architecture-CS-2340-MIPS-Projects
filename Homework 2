@@ -1,0 +1,45 @@
+# Asks the user to input a string and checks if the string is a blank string or not
+
+.data
+message: .asciiz "Enter Some Text:"
+buffer:  .space  100
+blankBuffer: .space 100
+blank:   .asciiz  "k\n"
+strElse: .asciiz "Not Equal"
+str:     .asciiz "Equal"   
+
+.text
+main:
+
+loop:
+	li $v0, 54
+	la $a0, message
+	la $a1, blankBuffer
+	la $a2, buffer
+	syscall
+	
+	la $a3, blank
+	beq $a1, $a3, equal
+	
+	li $v0, 4
+	la $a0, strElse
+	syscall
+	
+	li $v0, 4
+	la $a0, buffer
+	syscall
+	
+	li $v0, 11
+	li $a0, ';'
+	syscall
+	
+	j exit
+equal:
+	li $v0, 4
+	la $a0, str
+	syscall
+
+exit:
+	#exit program
+	li $v0, 10
+	syscall
