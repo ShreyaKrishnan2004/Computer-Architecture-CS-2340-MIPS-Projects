@@ -1,0 +1,115 @@
+# Asks the user to enter a series of words into a dialog box and outputs the word
+# and character counts for the strings until a blank string is entered or the cancel
+# button is clicked
+
+.data
+#Variables for the Input Dialog Box
+message: .asciiz "Enter some text: "
+buffer: .word 100
+string: .space 100
+#Variables to Store the Word and Character Count
+charCount: .word 0
+wordCount: .word 0
+#Variables to Store the Output Messages
+wordsMsg: .asciiz " words "
+charMsg: .asciiz " characters \n"
+endMsg: .asciiz "Message: Good Bye!"
+
+.text
+main:
+	#Shows the Dialog Box to Get String Input from the User
+	li $v0, 54
+	la $a0, message
+	la $a1, string
+	lw $a2, buffer
+	syscall
+
+	#Checks for Exit Command (Blank String or Cancel Button)
+	#Cancel Button
+	beq $a1, -2, ending
+	#Blank String
+	beq $a1, -3, ending
+
+	#Begins Processing String After Exit Commands Have Been Checked and Not Matched
+	la $a0, string
+	lw $a1, buffer
+	#Calls Count Function
+	jal count
+
+	#Stores Word and Character Counts
+	sw $v0, charCount
+	sw $v1, wordCount
+
+	#Prints Out User Inputted String
+	li $v0, 4
+	la $a0, string
+	syscall
+
+	#Prints Out Word Count
+	li $v0, 1
+	lw $a0, wordCount
+	syscall
+
+	li $v0, 4
+	la $a0, wordsMsg
+	syscall
+
+	#Prints Out Character Count
+	li $v0, 1
+	lw $a0, charCount
+	syscall
+
+	li $v0, 4
+	la $a0, charMsg
+	syscall
+	
+	j main
+	
+#Calculates Word and Character Counts
+count:
+	#Pushes $s0 Onto the Stack
+	addi $sp, $sp, -4
+	sw $s0, 0($sp)
+	move $s0, $a0
+	#Loads the Word and Character Counts Into $t1 and $t2
+	li $t1, 0
+	#The Word Count is Initialized to 1 Because the Word Count is 1 More Than the Number of Spaces in the String
+	li $t2, 1
+	characterIteration:
+		#Loads Each Character of the User Inputted String Into $t3
+		lb $t3, ($s0)
+		#Ends the Loop Once the Value of $t3 Becomes a New Line Character or Null Terminator
+		beq $t3, '\n', return
+		beq $t3, '\0', return
+		#Adds 1 to the Character Count After Every Character Iteration
+		add $t1, $t1, 1
+		#Calls 
+		beq $t3, ' ', wordIncr
+		j charIncr
+	#Adds 1 to the Word Count After Every Space
+	wordIncr:
+		addi $t2, $t2, 1
+	#Increments the Position of $s0 by 1 Byte to Move It to the Next Character in the User Inputted String
+	charIncr:
+		addi $s0, $s0, 1
+		j characterIteration
+	return:
+		#Pops $s0 Off the Stack
+		lw $s0, 0($sp)
+		add $sp, $sp, 4
+		#Moves the Word and Character Counts to the $v0 and $v1 Registers
+		move $v0, $t1
+		move $v1, $t2
+		#Returns Back to the Main Branch (Where the Count Function Was Called From)
+		jr $ra
+
+#Shows a Message Dialog with the Goodbye Message
+ending:
+	la $a0, endMsg
+	li $v0, 59
+	syscall
+
+#Exit Program
+exit:
+	li $v0, 10
+	syscall
