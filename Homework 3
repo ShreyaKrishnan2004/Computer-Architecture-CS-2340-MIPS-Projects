@@ -1,96 +1,108 @@
-# Asks the user for their height and weight then calculates and outputs their BMI
+# Asks the user for their height and weight, calculates their BMI, and outputs their
+# BMI and weight class (underweight, normal weight, overweight, obese)
 
 .data
-bmi:        .float  0
-height:     .float  0
-weight:     .float  0
-.align 6
-multiplier: .float 703
-name:       .asciiz ""
-nameMsg:    .asciiz "What is your name? "
-heightMsg:  .asciiz "Please enter your height in inches: "
-weightMsg:  .asciiz "Now enter your weight in pounds (round to a whole number): "
+nameMsg:           .asciiz "What is your name? "
+heightMsg:         .asciiz "Please enter your height in inches: "
+weightMsg:         .asciiz "Now enter your weight in pounds (round to a whole number): "
+bmiMsg:            .asciiz ", your BMI is: "
+name: 	           .space  20
+bmi:	           .float  0.0
+bmiVals:           .float  18.5, 25, 30
+bmiWeightClassMsg: .asciiz "\nThis is considered "
+bmiWeightClasses:  .asciiz "underweight.   ", "normal weight. ", "overweight.    ", "obese.         "
 
 .text
 main:
-	#Prompt the user to enter their name
-	li $v0, 4
-	la $a0, nameMsg
+	#MIDI out synchronous call
+	li $v0 33
+	li $a0 52
+	li $a1 20
+	li $a2 22
+	li $a3 127
+	syscall
+	
+	#Prompts the user to enter their name
+	la $a0 nameMsg
+	li $v0 4
 	syscall
 	
 	#Stores the user's name
-	li $v0, 8
-	la $a0, name
-	li $a1, 20
+	li $v0 8
+	la $a0 name
 	syscall
+	
+	#Removes newline character from name input (I know it wasn't required, but wanted to learn how to do it)
+	li $t0 -1
+index:
+	addi $t0 $t0 1
+	lb $t1 name($t0)
+	bne $t1 0xA index
+	sb $zero name($t0)
 	
 	#Prompt the user to enter their height
-	li $v0, 4
-	la $a0, heightMsg
+	la $a0 heightMsg
+	li $v0 4
 	syscall
 	
-	#Stores the user's height
-	li $v0, 6
+	#Stores the user's height into the $s1 register
+	li $v0 5
 	syscall
-	
-	mov.d $f0, $f2
+	move $s0 $v0
 	
 	#Prompt the user to enter their weight
-	li $v0, 4
-	la $a0, weightMsg
+	la $a0 weightMsg
+	li $v0 4
 	syscall
 	
-	#Stores the user's weight
-	li $v0, 6
+	#Stores the user's weight into the $s0 register
+	li $v0 5
+	syscall
+	move $s1 $v0
+	
+	#Multiplies the weight by 703
+	mul $s1 $s1 703
+	
+	#Squares the height
+	mul $s0 $s0 $s0
+	
+	#Divides the weight by the height after converting them to floating point values
+	mtc1 $s0 $f20
+	cvt.s.w $f20 $f20
+	mtc1 $s1 $f21
+	cvt.s.w $f21 $f21
+	div.s $f12 $f21 $f20
+	
+	#Outputs name and BMI
+	la $a0 name
+	li $v0 4
+	syscall
+	la $a0 bmiMsg
+	syscall
+	li $v0 2
 	syscall
 	
-	#s.d $f0, weight
+	#Deteremines what weight class the BMI indicates
+	li $t0 -4
+	la $t1 bmiVals
+status:
+	addi $t0 $t0 4
+	add $t2 $t1 $t0
+	l.s $f22 ($t2)
+	c.le.s $f12 $f22
+	bc1f status
 	
-	#multiplies the weight by 703
-	#l.d $f0, weight
-	l.d $f4, multiplier
-	#li $a2, 703
-	#mult $a1, $a2
-	#mflo $a0
-	#sw $a0, weight
-	mul.d $f0, $f0, $f4
-	
-	#squares the height
-	l.d $f2, height
-	#mult $a1, $a1
-	#mflo $a0
-	#sw $a0, height
-	mul.d $f2, $f2, $f2
-	
-	#divides the weight by the height after converting them to floating point values
-	#lw $a1, weight
-	#mtc1.d $a1, $f2
-	#cvt.d.w $f2, $f2
-	#mov.d $f12, $f2
-	#li $v0, 2
-	#syscall
-	
-	#lw $a2, height
-	#mtc1.d $a2, $f4
-	#cvt.d.w $f4, $f4
-	#mov.d $f12, $f4
-	#li $v0, 2
-	#syscall
-	
-	div.d $f12 $f0, $f2
-	s.d $f12, bmi
-	
-	#prints out name
-	li $v0, 4
-	la $a0, name
+	#Outpucts weight class
+	li $v0 4
+	la $a0 bmiWeightClassMsg
 	syscall
 	
-	#prints out bmi
-	li $v0, 2
-	l.d $f12, bmi
+	#Iterates through the array based on the weight class determined by the BMI
+	la $t1 bmiWeightClasses
+	sll $t0 $t0 2
+	add $t2 $t1 $t0
+	la $a0 ($t2)
 	syscall
-	
 exit:
-	#exit program
 	li $v0, 10
 	syscall
