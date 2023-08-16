@@ -1,0 +1,314 @@
+# Creates the outline of a 7 pixel-by-7 pixel square on a bitmap display. The
+# color of each pixel changes every second creating a "marque" effect, and the
+# position of the square can be moved up, down, left, and right using the
+# w-a-s-d keys.
+
+.data
+#Temporary varibales to store the starting address and x and y to
+#restore them to the first pixel after the square is drawn
+tempAddress: .word 0
+temps1: .word 0
+temps2: .word 0
+#Declaration of colors
+.eqv RED 0x00FF0000
+.eqv GREEN 0x0000FF00
+.eqv BLUE 0x000000FF
+.eqv WHITE 0x00FFFFFF
+.eqv YELLOW 0x00FFFF00
+.eqv CYAN 0x0000FFFF
+.eqv MAGENTA 0x00FF00FF
+.eqv BLACK 0xFFFFFFFF
+colors: .word MAGENTA, RED, YELLOW, GREEN, CYAN, BLUE, WHITE
+
+.text
+main:
+	#s1 stores the x position of the tail
+	li $s1, 80
+	#s2 stores the y position of the tail
+	li $s2, 5
+	#t3 stores the pixel that the square will begin on
+	li $t3, 0x10009330
+	#t0 will store the counter that keeps track of how many pixels have been drawn
+	li $t0,0
+	jal draw_square
+
+#Input reading loop
+loop:
+	#Checks for input
+	lw $t0, 0xffff0000
+	#Calls the marque function if no input is entered
+  	beq $t0, 0, marque
+	
+	#s3 holds the input that has been entered
+	lw 	$s3, 0xffff0004
+	#Exit called if space is entered
+	beq	$s3, 32, exit
+	#Up function called to move the square up if w is entered
+	beq	$s3, 119, up
+	#Down function called to move the square down if s is entered
+	beq	$s3, 115, down
+	#Left function called to move the square left if a is entered
+	beq	$s3, 97, left
+	#Right function called to move the square right if d is entered
+	beq	$s3, 100, right
+	j	loop
+
+#Moves the square up	
+up:
+	#Blacks out the previous square
+	jal draw_black_square
+	#(This code is explained in the draw_square function)
+	mul $t2,$s2,256
+	add $t1,$t0,$s1
+	mul $t1,$t1,4
+	add $t1,$t1,$t2
+	addu $t1, $t3, $t1
+	addi $a2, $0, 0
+	sw $a2, ($t1)
+	#Subtracts 1 pixel from the y component of the starting pixel
+	addi $t3, $t3, -256
+	#Draws the new square
+	jal draw_square
+	j loop
+
+#Moves the square down
+down:
+	#Blacks out the previous square
+	jal draw_black_square
+	#(This code is explained in the draw_square function)
+	mul $t2,$s2,256
+	add $t1,$t0,$s1
+	mul $t1,$t1,4
+	add $t1,$t1,$t2
+	addu $t1, $t3, $t1
+	addi $a2, $0, 0
+	sw $a2, ($t1)
+	#Adds 1 pixel to the y component of the starting pixel
+	addi $t3, $t3, 256
+	#Draws the new square
+	jal draw_square
+	j loop
+
+#Moves the square left
+left:
+	#Blacks out the previous square
+	jal draw_black_square
+	#(This code is explained in the draw_square function)
+	mul $t2,$s2,256
+	add $t1,$t0,$s1
+	mul $t1,$t1,4
+	add $t1,$t1,$t2
+	addu $t1, $t3, $t1
+	addi $a2, $0, 0
+	sw $a2, ($t1)
+	#Subtracts 1 pixel from the x component of the starting pixel
+	addi $t3, $t3, -4
+	#Draws the new square
+	jal draw_square
+	j loop
+
+#Moves the square right
+right:
+	#Blacks out the previous square
+	jal draw_black_square
+	#(This code is explained in the draw_square function)
+	mul $t2,$s2,256
+	add $t1,$t0,$s1
+	mul $t1,$t1,4
+	add $t1,$t1,$t2
+	addu $t1, $t3, $t1
+	addi $a2, $0, 0
+	sw $a2, ($t1)
+	#Adds 1 pixel to the x component of the starting pixel
+	addi $t3, $t3, 4
+	#Draws the new square
+	jal draw_square
+	j loop
+
+#Continuously changes to the colors of each pixel
+marque:
+	#t7 stores the index of the last color in the array
+	li $t7, 24
+	#t5 stores the last color in the array
+	lw $t5, colors($t7)
+	#t6 stores the index of the second to last color in the array
+	li $t6, 20
+	changeColors:
+		#Moves the color in index t6 into index t7 (moves it to the right 1)
+		lw $t8, colors($t6)
+		sw $t8, colors($t7)
+		#Subtracts 1 index from t6 and t7 to loop through the entire array backwards
+		subi $t7, $t7, 4
+		subi $t6, $t6, 4
+		#Loops until t7 is equal to 0
+		bne $t7, $0, changeColors
+	#Stores the color that was originally last in the array into the first index of the array stored by t5
+	sw $t5, colors($t7)
+	#Pause function
+	li $v0, 32
+	li $a0, 50
+	#Draws the new square with the changed colors
+	jal draw_square
+	j loop
+
+#Draws a square
+draw_square:
+	#Stores the values of t3, s1, and s2 to restore them after the square is drawn
+	sw $t3, tempAddress
+	sw $s1, temps1
+	sw $s2, temps2
+
+	#Draws the first side of the square
+	loop1:
+		#Gets the y index of the starting pixel
+		mul $t2,$s2,256
+		#Loads the center address
+		add $t1,$t0,$s1
+		mul $t1,$t1,4
+		add $t1,$t1,$t2
+		#Adds xy to the starting pixel stored in t3
+		addu $t1, $t3, $t1
+		#a2 stores the address of the color of the pixel to be drawn
+		mul $a2,$t0,4
+		#Accesses the next color through the array colors
+		lw $a2, colors($a2)
+		#Stores the color into t1
+		sw $a2, ($t1)
+		#Adds 1 to the t0, which is the loop counter
+		add $t0,$t0,1
+		#Loops until t0 is equal to 7/when 7 pixels have been drawn
+		blt $t0,7,loop1
+		#Resets t0 to 0
+		li $t0,0
+
+	#Draws the second side of the square
+	loop2:
+		#Gets the next line and modifies t2 to start the next side in the correct position
+		add $t2,$s2,6
+		mul $t2,$t2,340
+		add $t1,$t0,$s1
+		mul $t1,$t1,-4
+		add $t1,$t1,$t2
+		addu $t1, $t3, $t1
+		mul $a2,$t0,4
+		lw $a2,colors($a2)
+		sw $a2, ($t1)
+		add $t0,$t0,1
+		blt $t0,7,loop2
+		li $t0,0
+
+	#Draws the third side of the square
+	loop3:
+		add $t2,$s2,$t0
+		mul $t2,$t2,256
+		add $t1,$s1,7
+		mul $t1,$t1,4
+		add $t1,$t1,$t2
+		addu $t1, $t3, $t1
+		mul $a2,$t0,4
+		lw $a2,colors($a2)
+		sw $a2, ($t1)
+		add $t0,$t0,1
+		blt $t0,7,loop3
+		li $t0, 0
+
+		#Modifies s2 ad s1 to start the fourth side at the correct position
+		add $s2, $s2, -20
+		add $s1, $s1, 32
+
+	#Draws the last side of the square
+	loop4:
+		add $t2,$s2,$t0
+		mul $t2,$t2,256
+		mul $t1,$s1,4
+		add $t1,$t1,$t2
+		subu $t1, $t3, $t1
+		mul $a2,$t0,4
+		lw $a2,colors($a2)
+		sw $a2, ($t1)
+		add $t0,$t0,1
+		blt $t0,7,loop4
+		li $t0,0
+
+	#Restores t3, s1, and s2 so that another square can be drawn
+	lw $t3, tempAddress
+	lw $s1, temps1
+	lw $s2, temps2
+
+	#Jumps back to wherever draw_square was called
+	jr $ra
+
+#Draws a black square to "erase" a square
+draw_black_square:
+	#Does the same process as draw_square but with black instead of the array colors
+	sw $t3, tempAddress
+	sw $s1, temps1
+	sw $s2, temps2
+
+  #Draws the first side of the black square
+	loopb1:
+		mul $t2,$s2,256
+		add $t1,$t0,$s1
+		mul $t1,$t1,4
+		add $t1,$t1,$t2
+		addu $t1, $t3, $t1
+		#a2 is 0, for black, instead of an index from array colors
+		addi $a2, $0, 0
+		sw $a2, ($t1)
+		add $t0,$t0,1
+		blt $t0,7,loopb1
+		li $t0,0
+
+  #Draws the second side of the black square
+	loopb2:
+		add $t2,$s2,6
+		mul $t2,$t2,340
+		add $t1,$t0,$s1
+		mul $t1,$t1,-4
+		add $t1,$t1,$t2
+		addu $t1, $t3, $t1
+		addi $a2, $0, 0
+		sw $a2, ($t1)
+		add $t0,$t0,1
+		blt $t0,7,loopb2
+		li $t0,0
+
+  #Draws the third side of the black square
+	loopb3:
+		add $t2,$s2,$t0
+		mul $t2,$t2,256
+		add $t1,$s1,7
+		mul $t1,$t1,4
+		add $t1,$t1,$t2
+		addu $t1, $t3, $t1
+		addi $a2, $0, 0
+		sw $a2, ($t1)
+		add $t0,$t0,1
+		blt $t0,7,loopb3
+		li $t0, 0
+		add $s2, $s2, -20
+		add $s1, $s1, 32
+
+  #Draws the last side of the black square
+	loopb4:
+		add $t2,$s2,$t0
+		mul $t2,$t2,256
+		mul $t1,$s1,4
+		add $t1,$t1,$t2
+		subu $t1, $t3, $t1
+		addi $a2, $0, 0
+		sw $a2, ($t1)
+		add $t0,$t0,1
+		blt $t0,7,loopb4
+		li $t0,0
+	lw $t3, tempAddress
+	lw $s1, temps1
+	lw $s2, temps2
+
+	#Jumps back to where draw_black_square was called
+	jr $ra
+
+#Exit function
+exit:
+	li $v0, 10
+	syscall
